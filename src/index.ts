@@ -4,6 +4,7 @@ import { APIApplicationCommandInteractionDataBooleanOption, APIApplicationComman
 import { whois } from './whois';
 import { servers } from './servers';
 import { msg, defer, updateOriginal, autocomplete } from './utils';
+import { caches } from '@cloudflare/workers-types';
 
 export type AppEnv = { Variables: { interaction: APIInteraction }, Bindings: { PUBLIC_KEY: string } }
 
@@ -21,21 +22,28 @@ app.post('/interactions', discordVerify, async (c) => {
       const english = (data.options?.findLast((e) => e.name === "english") as APIApplicationCommandInteractionDataBooleanOption)?.value ?? true
 
       let server: {
-        name: string,
+        name?: string,
         server: string,
-        match?: string,
         supportsEnglish?: boolean
       } | undefined
 
       if (!serverStr) {
         server = servers.findLast((e) => e.match && query.match(e.match))
+
         if (!server) {
-          return c.json(msg({
-            content: "Cannot find server",
-            flags: MessageFlags.Ephemeral
-          }))
+          const resp = await whois(query, "whois.iana.org")
+          const serverDomain = resp?.match(/^whois: (.+)$/m)?.[1].trim().toLowerCase()
+          if (serverDomain) {
+            server = servers.findLast((e) => e.server === serverDomain)
+            if (!server) {
+              server = {
+                server: serverDomain,
+                supportsEnglish: false
+              }
+            }
+          }
         }
-      } else if (!serverStr.match(/^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\-]*[A-Za-z0-9])$/)) {
+      } else if (!serverStr.match(/^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\-]*[A-Za-z0-9])$/)) { // autocompleteの名前でヒットする場合の処理
         server = servers.findLast((e) => e.name.toLowerCase() === serverStr.toLowerCase())
 
         if (!server) {
@@ -50,10 +58,17 @@ app.post('/interactions', discordVerify, async (c) => {
         query += "/e"
       }
 
+      if (!server) {
+        return c.json(msg({
+          content: "Cannot select server",
+          flags: MessageFlags.Ephemeral
+        }))
+      }
+
       c.executionCtx.waitUntil((async () => {
         let resp
         try {
-          resp = await whois(query, server?.server ?? "")
+          resp = await whois(query, server.server)
           if (!resp) throw new Error("No response from server")
         } catch (e) {
           return c.json(msg({
@@ -70,7 +85,7 @@ app.post('/interactions', discordVerify, async (c) => {
               color: 0x2b2d31,
               timestamp: new Date().toISOString(),
               footer: {
-                text: server?.name ?? "Unknown" 
+                text: server.name ?? server.server
               }
             }
           ]

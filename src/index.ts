@@ -5,6 +5,7 @@ import { whois } from './whois';
 import { servers } from './servers';
 import { msg, defer, updateOriginal, autocomplete } from './utils';
 import { caches } from '@cloudflare/workers-types';
+import { json } from 'stream/consumers';
 
 export type AppEnv = { Variables: { interaction: APIInteraction }, Bindings: { PUBLIC_KEY: string } }
 
@@ -93,6 +94,41 @@ app.post('/interactions', discordVerify, async (c) => {
       })())
 
       return c.json(defer())
+    } else if (body.data.name === "ipinfo") {
+      const query = (data.options?.findLast((e) => e.name === "query") as APIApplicationCommandInteractionDataStringOption)?.value
+
+      const resp = await fetch(`https://ipinfo.io/${query}`, {
+        headers: {
+          "accept": "application/json;charset=utf-8"
+        }
+      })
+
+      if (resp.ok) {
+        const data = await resp.json()
+
+        return c.json(msg({
+          embeds: [
+            {
+              title: "ipinfo.io",
+              description: `\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``,
+              color: 0x2b2d31,
+            }
+          ]
+        }))
+      } else {
+        const error = await resp.json() as {
+          status: number,
+          error: {
+            title: string,
+            message: string
+          }
+        }
+
+        return c.json(msg({
+          content: `${error.error.title} (${error.status || resp.status}): ${error.error.message}`,
+          flags: MessageFlags.Ephemeral
+        }))
+      }
     }
   } else if (body.type === InteractionType.ApplicationCommandAutocomplete) {
     const data = body?.data as APIAutocompleteApplicationCommandInteractionData

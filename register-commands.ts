@@ -38,7 +38,27 @@ const commands: RESTPutAPIApplicationCommandsJSONBody = [
                 required: false
             }
         ]
-    }
+    },
+    {
+        name: "ipinfo",
+        description: "Query ipinfo",
+        description_localizations: {
+            ja: "ipinfo.ioにクエリします",
+        },
+        integration_types: [ApplicationIntegrationType.UserInstall, ApplicationIntegrationType.GuildInstall],
+        contexts: [InteractionContextType.BotDM, InteractionContextType.Guild, InteractionContextType.PrivateChannel],
+        options: [
+            {
+                name: "query",
+                description: "Query",
+                description_localizations: {
+                    ja: "クエリ",
+                },
+                type: ApplicationCommandOptionType.String,
+                required: true
+            },
+        ]
+    },
 ]
 
 const resp = await fetch(`https://discord.com/api/v10/applications/${process.env.APPLICATION_ID}/commands`, {

@@ -1,5 +1,5 @@
-import { MessageFlags } from "discord-api-types/v10";
-import { Server } from "../servers";
+import { APIActionRowComponent, APIStringSelectComponent, ComponentType, MessageFlags } from "discord-api-types/v10";
+import { mappings, Server } from "../servers";
 import { Context } from "hono";
 import { AppEnv } from "..";
 import { servers } from "../servers";
@@ -64,8 +64,9 @@ export async function queryWhois(
     }
   }
 
+  let lookupQuery = query
   if (english && server?.supportsEnglish && !query.endsWith("/e")) {
-    query += "/e";
+    lookupQuery += "/e";
   }
 
   if (!server) {
@@ -82,7 +83,7 @@ export async function queryWhois(
     (async () => {
       let resp;
       try {
-        resp = await whois(query, server.server);
+        resp = await whois(lookupQuery, server.server);
         if (!resp) throw new Error("No response from server");
       } catch (e) {
         await updateOriginal(body, {
@@ -91,10 +92,77 @@ export async function queryWhois(
         return;
       }
 
+      const originalOptions = (body.message?.components as APIActionRowComponent<APIStringSelectComponent>[] | undefined)?.[0]?.components[0]?.options ?? []
+
+      const matches: Record<string, {
+        name: string,
+        server: string,
+        query: string,
+      }> = {}
+
+      for (const e of originalOptions) {
+        const [server, query] = e.value.split(":")
+        matches[query] = {
+          name: e.description ?? "",
+          server: server,
+          query,
+        }
+      }
+
+      for (const mapping of mappings.filter(e => e.origin.test(server.server))) {
+        for (const match of resp.matchAll(mapping.match)) {
+          const query = match[1]
+          matches[query] = {
+            name: mapping.name,
+            server: mapping.server,
+            query,
+          }
+        }
+      }
+
+      if (Object.values(matches).filter((e) => e.name === "Original Query").length === 0) {
+        matches[query] = {
+          name: "Original Query",
+          server: server.server,
+          query: query,
+        }
+      }
+
+      console.log(query)
+
+      let components: APIActionRowComponent<APIStringSelectComponent>[] = []
+
+      const sortedMatches = Object.values(matches)
+        .sort((a, b) => {
+          if (a.name === "Original Query") return -1;
+          if (b.name === "Original Query") return 1;
+          return 0;
+        });
+
+      if (Object.keys(matches).length > 0) {
+        components = [
+          {
+            type: ComponentType.ActionRow,
+            components: [
+              {
+                type: ComponentType.StringSelect,
+                custom_id: `whois_links:${lookupQuery}`,
+                options: sortedMatches.map(e => ({
+                  label: e.query,
+                  value: `${e.server}:${e.query}`,
+                  description: e.name,
+                  default: e.query === query
+                })).slice(0, 25)
+              }
+            ]
+          }
+        ]
+      }
+
       await updateOriginal(body, {
         embeds: [
           {
-            title: `WHOIS: ${query}`,
+            title: `WHOIS: ${lookupQuery}`,
             description: `\`\`\`\n${resp}\n\`\`\``,
             color: 0x2b2d31,
             timestamp: new Date().toISOString(),
@@ -103,6 +171,7 @@ export async function queryWhois(
             },
           },
         ],
+        components
       });
     })(),
   );

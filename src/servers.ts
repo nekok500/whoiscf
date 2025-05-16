@@ -1,4 +1,11 @@
-export const servers = [
+export type Server = {
+    name?: string,
+    server: string,
+    match?: string,
+    supportsEnglish?: boolean
+}
+
+export const servers: Server[] = [
     {
         name: "JPRS Whois",
         server: "whois.jprs.jp",

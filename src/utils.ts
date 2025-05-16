@@ -25,6 +25,7 @@ export const autocomplete = (data: APICommandAutocompleteInteractionResponseCall
 export const defer = (data?: {
     flags?: MessageFlags
 }): APIInteractionResponse => ({ type: InteractionResponseType.DeferredChannelMessageWithSource, data: data })
+export const deferUpdate = (): APIInteractionResponse => ({ type: InteractionResponseType.DeferredMessageUpdate })
 export const updateOriginal = async (i: APIInteraction, data: RESTPatchAPIInteractionOriginalResponseJSONBody): Promise<RESTPatchAPIInteractionOriginalResponseResult> => {
     const resp = await fetch(`https://discord.com/api/webhooks/${i.application_id}/${i.token}/messages/@original`, {
         method: "PATCH",

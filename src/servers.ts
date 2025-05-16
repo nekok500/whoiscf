@@ -2,7 +2,7 @@ export const servers = [
     {
         name: "JPRS Whois",
         server: "whois.jprs.jp",
-        match: "^.+\.jp$",
+        match: "^(.+\\.jp|[A-z]{2}\\d{5}[Jj][Pp])$",
         supportsEnglish: true
     },
     {

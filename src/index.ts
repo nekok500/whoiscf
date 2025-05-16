@@ -1,11 +1,9 @@
 import { Hono } from 'hono'
 import { discordVerify } from './middleware'
-import { APIApplicationCommandInteractionDataBooleanOption, APIApplicationCommandInteractionDataStringOption, APIAutocompleteApplicationCommandInteractionData, APIChatInputApplicationCommandInteractionData, APICommandAutocompleteInteractionResponseCallbackData, APIInteraction, APIInteractionResponse, APIInteractionResponseCallbackData, InteractionResponseType, InteractionType, MessageFlags, RESTPatchAPIInteractionOriginalResponseJSONBody, RESTPatchAPIInteractionOriginalResponseResult, urlSafeCharacters } from 'discord-api-types/v10'
+import { APIApplicationCommandInteractionDataBooleanOption, APIApplicationCommandInteractionDataStringOption, APIAutocompleteApplicationCommandInteractionData, APIChatInputApplicationCommandInteractionData, APIInteraction, InteractionType, MessageFlags } from 'discord-api-types/v10'
 import { whois } from './whois';
 import { servers } from './servers';
 import { msg, defer, updateOriginal, autocomplete } from './utils';
-import { caches } from '@cloudflare/workers-types';
-import { json } from 'stream/consumers';
 
 export type AppEnv = { Variables: { interaction: APIInteraction }, Bindings: { PUBLIC_KEY: string } }
 
@@ -19,7 +17,7 @@ app.post('/interactions', discordVerify, async (c) => {
 
     if (body.data.name === "whois") {
       let query = (data.options?.findLast((e) => e.name === "query") as APIApplicationCommandInteractionDataStringOption)?.value
-      let serverStr = (data.options?.findLast((e) => e.name === "server") as APIApplicationCommandInteractionDataStringOption)?.value
+      const serverStr = (data.options?.findLast((e) => e.name === "server") as APIApplicationCommandInteractionDataStringOption)?.value
       const english = (data.options?.findLast((e) => e.name === "english") as APIApplicationCommandInteractionDataBooleanOption)?.value ?? true
 
       let server: {
@@ -44,7 +42,7 @@ app.post('/interactions', discordVerify, async (c) => {
             }
           }
         }
-      } else if (!serverStr.match(/^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\-]*[A-Za-z0-9])$/)) { // autocompleteの名前でヒットする場合の処理
+      } else if (!serverStr.match(/^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9-]*[a-zA-Z0-9])\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9-]*[A-Za-z0-9])$/)) { // autocompleteの名前でヒットする場合の処理
         server = servers.findLast((e) => e.name.toLowerCase() === serverStr.toLowerCase())
 
         if (!server) {

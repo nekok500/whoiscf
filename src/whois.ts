@@ -10,7 +10,7 @@ export async function whois(query: string, server: string): Promise<string | und
 
     await client.write(query + '\r\n');
 
-    let data = await client.readAll()
+    const data = await client.readAll()
     await client.end()
 
     return data?.toString()

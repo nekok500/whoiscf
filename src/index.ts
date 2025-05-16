@@ -1,49 +1,1 @@
-import { Hono } from 'hono'
-import { discordVerify } from './middleware'
-import { APIApplicationCommandInteractionDataBooleanOption, APIApplicationCommandInteractionDataStringOption, APIAutocompleteApplicationCommandInteractionData, APIChatInputApplicationCommandInteractionData, APIInteraction, InteractionType } from 'discord-api-types/v10'
-import { servers } from './servers';
-import { autocomplete } from './utils';
-import { queryWhois } from './actions/whois';
-import { queryIpinfo } from './actions/ipinfo';
-
-export type AppEnv = { Variables: { interaction: APIInteraction, commandIds: Record<string, string> }, Bindings: { PUBLIC_KEY: string, DISCORD_TOKEN: string } }
-
-const app = new Hono<AppEnv>()
-
-app.post('/interactions', discordVerify, async (c) => {
-  const body = c.get("interaction")
-
-  if (body.type === InteractionType.ApplicationCommand) {
-    const data = body?.data as APIChatInputApplicationCommandInteractionData
-
-    if (body.data.name === "whois") {
-      const query = (data.options?.findLast((e) => e.name === "query") as APIApplicationCommandInteractionDataStringOption)?.value
-      const serverStr = (data.options?.findLast((e) => e.name === "server") as APIApplicationCommandInteractionDataStringOption)?.value
-      const english = (data.options?.findLast((e) => e.name === "english") as APIApplicationCommandInteractionDataBooleanOption)?.value ?? true
-
-      return await queryWhois(c, query, serverStr, english)
-    } else if (body.data.name === "ipinfo") {
-      const query = (data.options?.findLast((e) => e.name === "query") as APIApplicationCommandInteractionDataStringOption)?.value
-
-      return queryIpinfo(c, query)
-    }
-  } else if (body.type === InteractionType.ApplicationCommandAutocomplete) {
-    const data = body?.data as APIAutocompleteApplicationCommandInteractionData
-
-    if (data.name === "whois") {
-      const server = (data.options?.findLast((e) => e.name === "server") as APIApplicationCommandInteractionDataStringOption)?.value
-
-      return c.json(autocomplete({
-        choices: servers.map((e) => ({
-          name: e.name ?? e.server,
-          value: e.server
-        })).filter((e) => e.name.toLowerCase().includes(server.toLowerCase())).slice(0, 25)
-      }))
-
-    }
-  }
-
-  return c.json({})
-})
-
-export default app
+import { Hono } from "hono";import { discordVerify } from "./middleware";import {  APIApplicationCommandInteractionDataBooleanOption,  APIApplicationCommandInteractionDataStringOption,  APIAutocompleteApplicationCommandInteractionData,  APIChatInputApplicationCommandInteractionData,  APIInteraction,  InteractionType,} from "discord-api-types/v10";import { servers } from "./servers";import { autocomplete } from "./utils";import { queryWhois } from "./actions/whois";import { queryIpinfo } from "./actions/ipinfo";export type AppEnv = {  Variables: {    interaction: APIInteraction;    commandIds: Record<string, string>;  };  Bindings: { PUBLIC_KEY: string; DISCORD_TOKEN: string };};const app = new Hono<AppEnv>();app.post("/interactions", discordVerify, async (c) => {  const body = c.get("interaction");  if (body.type === InteractionType.ApplicationCommand) {    const data = body?.data as APIChatInputApplicationCommandInteractionData;    if (body.data.name === "whois") {      const query = (        data.options?.findLast(          (e) => e.name === "query",        ) as APIApplicationCommandInteractionDataStringOption      )?.value;      const serverStr = (        data.options?.findLast(          (e) => e.name === "server",        ) as APIApplicationCommandInteractionDataStringOption      )?.value;      const english =        (          data.options?.findLast(            (e) => e.name === "english",          ) as APIApplicationCommandInteractionDataBooleanOption        )?.value ?? true;      return await queryWhois(c, query, serverStr, english);    } else if (body.data.name === "ipinfo") {      const query = (        data.options?.findLast(          (e) => e.name === "query",        ) as APIApplicationCommandInteractionDataStringOption      )?.value;      return queryIpinfo(c, query);    }  } else if (body.type === InteractionType.ApplicationCommandAutocomplete) {    const data = body?.data as APIAutocompleteApplicationCommandInteractionData;    if (data.name === "whois") {      const server = (        data.options?.findLast(          (e) => e.name === "server",        ) as APIApplicationCommandInteractionDataStringOption      )?.value;      return c.json(        autocomplete({          choices: servers            .map((e) => ({              name: e.name ?? e.server,              value: e.server,            }))            .filter((e) => e.name.toLowerCase().includes(server.toLowerCase()))            .slice(0, 25),        }),      );    }  }  return c.json({});});export default app;

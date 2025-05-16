@@ -79,7 +79,7 @@ app.post('/interactions', discordVerify, async (c) => {
         await updateOriginal(body, {
           embeds: [
             {
-              title: "WHOIS",
+              title: `WHOIS: ${query}`,
               description: `\`\`\`\n${resp}\n\`\`\``,
               color: 0x2b2d31,
               timestamp: new Date().toISOString(),
@@ -107,7 +107,7 @@ app.post('/interactions', discordVerify, async (c) => {
         return c.json(msg({
           embeds: [
             {
-              title: "ipinfo.io",
+              title: `ipinfo.io: ${query}`,
               description: `\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``,
               color: 0x2b2d31,
             }
